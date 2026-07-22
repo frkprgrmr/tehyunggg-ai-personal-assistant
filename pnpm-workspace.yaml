@@ -1,0 +1,9 @@
+# Configured for pnpm v11+ to allow required build scripts
+allowBuilds:
+  "@prisma/engines": true
+  "esbuild": true
+  "prisma": true
+  "sharp": true
+  "unrs-resolver": true
+  "@google/genai": true
+  "protobufjs": true

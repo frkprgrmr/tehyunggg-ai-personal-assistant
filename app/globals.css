@@ -1,26 +1,103 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* ─── Brand Colors ────────────────────────────── */
+  --color-brand-50: oklch(0.97 0.01 260);
+  --color-brand-100: oklch(0.93 0.03 260);
+  --color-brand-200: oklch(0.87 0.06 260);
+  --color-brand-300: oklch(0.78 0.09 260);
+  --color-brand-400: oklch(0.68 0.14 260);
+  --color-brand-500: oklch(0.58 0.18 260);
+  --color-brand-600: oklch(0.50 0.19 260);
+  --color-brand-700: oklch(0.43 0.17 260);
+  --color-brand-800: oklch(0.36 0.14 260);
+  --color-brand-900: oklch(0.30 0.11 260);
+  --color-brand-950: oklch(0.22 0.08 260);
+
+  /* ─── Surface Colors (dark mode first) ────────── */
+  --color-surface-0: oklch(0.13 0.01 260);
+  --color-surface-50: oklch(0.16 0.01 260);
+  --color-surface-100: oklch(0.20 0.01 260);
+  --color-surface-200: oklch(0.25 0.01 260);
+  --color-surface-300: oklch(0.32 0.01 260);
+
+  /* ─── Status Colors ──────────────────────────── */
+  --color-success: oklch(0.72 0.17 155);
+  --color-warning: oklch(0.80 0.15 75);
+  --color-danger: oklch(0.65 0.20 25);
+  --color-info: oklch(0.72 0.15 230);
+
+  /* ─── Typography ─────────────────────────────── */
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Base Styles ──────────────────────────────── */
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-surface-0);
+  color: oklch(0.90 0.01 260);
+}
+
+/* ─── Custom Scrollbar ─────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(0.30 0.01 260);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.40 0.01 260);
+}
+
+/* ─── Animations ───────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.58 0.18 260 / 0.3); }
+  50% { box-shadow: 0 0 16px 4px oklch(0.58 0.18 260 / 0.15); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out both;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.3s ease-out both;
+}
+
+/* ─── Glass Effect ─────────────────────────────── */
+.glass {
+  background: oklch(0.16 0.01 260 / 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid oklch(1 0 0 / 0.06);
+}
+
+.glass-hover:hover {
+  background: oklch(0.20 0.01 260 / 0.7);
+  border-color: oklch(1 0 0 / 0.10);
 }

@@ -1,0 +1,163 @@
+// Prisma schema for Tehyungggg Phase 1 & 2
+// Entities: User, Project, Task, TaskLog, Conversation
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Auth ──────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String // bcrypt hashed
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Project ───────────────────────────────────────────
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tasks Task[]
+}
+
+// ─── Task ──────────────────────────────────────────────
+
+enum TaskStatus {
+  Todo
+  InProgress
+  Done
+  Cancelled
+}
+
+enum TaskPriority {
+  Low
+  Medium
+  High
+  Critical
+}
+
+enum TaskCategory {
+  Work
+  Personal
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String?      @db.Text
+  projectId   String?
+  status      TaskStatus   @default(Todo)
+  priority    TaskPriority @default(Medium)
+  category    TaskCategory @default(Work)
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  project Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  logs    TaskLog[]
+  notes   TaskNote[]
+
+  @@index([status])
+  @@index([priority])
+  @@index([dueDate])
+  @@index([projectId])
+}
+
+// ─── TaskLog (audit trail) ─────────────────────────────
+
+model TaskLog {
+  id        String   @id @default(cuid())
+  taskId    String
+  field     String
+  oldValue  String?
+  newValue  String?
+  changedAt DateTime @default(now())
+  changedBy String   @default("user") // "user" | "system"
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+}
+
+// ─── TaskNote (progress & notes) ───────────────────────
+
+model TaskNote {
+  id        String   @id @default(cuid())
+  taskId    String
+  content   String   @db.Text
+  url       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([createdAt])
+}
+
+// ─── Conversation (Phase 2 — AI Chat) ─────────────────
+
+model Conversation {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String   // "user" | "assistant" | "tool"
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
