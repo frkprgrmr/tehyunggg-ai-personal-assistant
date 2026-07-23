@@ -6,6 +6,7 @@ async function main() {
   const models = await ai.models.list();
   const testModels = [];
   for await (const model of models) {
+    if (!model.name) continue;
     if (model.name.includes("flash") && !model.name.includes("preview") && !model.name.includes("audio") && !model.name.includes("image")) {
       testModels.push(model.name.replace('models/', ''));
     }
