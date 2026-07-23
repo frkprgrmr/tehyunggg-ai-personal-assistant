@@ -23,7 +23,7 @@ async function main() {
       });
       console.log(`✅ Success for ${model}: ${response.text}`);
       break; // Found one that works!
-    } catch (e) {
+    } catch (e: any) {
       console.log(`❌ Error for ${model}: ${e.message}`);
     }
   }
