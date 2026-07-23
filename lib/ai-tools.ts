@@ -178,11 +178,125 @@ export async function handleSearchTask(args: {
   return tasks;
 }
 
+// ─── searchProject ─────────────────────────────────────
+
+export async function handleSearchProject(args: {
+  query?: string;
+}) {
+  const where: Prisma.ProjectWhereInput = {};
+
+  if (args.query) {
+    where.OR = [
+      { name: { contains: args.query, mode: "insensitive" } },
+      { description: { contains: args.query, mode: "insensitive" } },
+    ];
+  }
+
+  const projects = await db.project.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    include: {
+      _count: { select: { tasks: true } },
+    },
+  });
+
+  return projects;
+}
+
+// ─── createReminder ────────────────────────────────────
+
+export async function handleCreateReminder(args: {
+  title: string;
+  message: string;
+  remindAt: string;
+  relatedTaskId?: string;
+  userId: string;
+}) {
+  const reminder = await db.reminder.create({
+    data: {
+      userId: args.userId,
+      title: args.title,
+      message: args.message,
+      remindAt: new Date(args.remindAt),
+      relatedTaskId: args.relatedTaskId || null,
+    },
+    include: {
+      relatedTask: {
+        select: { id: true, title: true, status: true },
+      },
+    },
+  });
+
+  return reminder;
+}
+
+// ─── listReminders ─────────────────────────────────────
+
+export async function handleListReminders(args: {
+  status?: string;
+  upcoming?: boolean;
+  userId: string;
+}) {
+  const where: Prisma.ReminderWhereInput = {
+    userId: args.userId,
+  };
+
+  if (args.status) {
+    where.status = args.status as Prisma.EnumReminderStatusFilter;
+  }
+
+  if (args.upcoming) {
+    where.status = "Pending";
+    where.remindAt = { gte: new Date() };
+  }
+
+  const reminders = await db.reminder.findMany({
+    where,
+    orderBy: { remindAt: "asc" },
+    take: 20,
+    include: {
+      relatedTask: {
+        select: { id: true, title: true, status: true },
+      },
+    },
+  });
+
+  return reminders;
+}
+
+// ─── dismissReminder ───────────────────────────────────
+
+export async function handleDismissReminder(args: {
+  reminderId: string;
+}) {
+  const reminder = await db.reminder.findUnique({
+    where: { id: args.reminderId },
+  });
+
+  if (!reminder) {
+    return { error: `Reminder dengan ID ${args.reminderId} tidak ditemukan.` };
+  }
+
+  const updated = await db.reminder.update({
+    where: { id: args.reminderId },
+    data: { status: "Dismissed" },
+    include: {
+      relatedTask: {
+        select: { id: true, title: true, status: true },
+      },
+    },
+  });
+
+  return updated;
+}
+
 // ─── Tool Router ───────────────────────────────────────
 
 export async function executeToolCall(
   functionName: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  context?: { userId?: string }
 ): Promise<unknown> {
   switch (functionName) {
     case "createTask":
@@ -193,7 +307,22 @@ export async function executeToolCall(
       return handleDeleteTask(args as Parameters<typeof handleDeleteTask>[0]);
     case "searchTask":
       return handleSearchTask(args as Parameters<typeof handleSearchTask>[0]);
+    case "searchProject":
+      return handleSearchProject(args as Parameters<typeof handleSearchProject>[0]);
+    case "createReminder":
+      return handleCreateReminder({
+        ...(args as Omit<Parameters<typeof handleCreateReminder>[0], "userId">),
+        userId: context?.userId || "",
+      });
+    case "listReminders":
+      return handleListReminders({
+        ...(args as Omit<Parameters<typeof handleListReminders>[0], "userId">),
+        userId: context?.userId || "",
+      });
+    case "dismissReminder":
+      return handleDismissReminder(args as Parameters<typeof handleDismissReminder>[0]);
     default:
       return { error: `Unknown tool: ${functionName}` };
   }
 }
+

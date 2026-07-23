@@ -8,17 +8,20 @@ import {
   ListTodo,
   FolderKanban,
   MessageSquare,
+  Bell,
   LogOut,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 import { useState, ReactNode } from "react";
+import NotificationBell from "@/components/notifications/notification-bell";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/projects", label: "Projects", icon: FolderKanban },
+  { href: "/reminders", label: "Reminders", icon: Bell },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -99,7 +102,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           )}
 
           {/* Actions */}
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1">
+            <NotificationBell />
             <button
               onClick={() => signOut({ callbackUrl: "/login" })}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-white/40 hover:text-danger hover:bg-danger/10 transition-all cursor-pointer ${

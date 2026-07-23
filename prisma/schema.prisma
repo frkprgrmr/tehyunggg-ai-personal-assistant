@@ -1,5 +1,5 @@
-// Prisma schema for Tehyungggg Phase 1 & 2
-// Entities: User, Project, Task, TaskLog, Conversation
+// Prisma schema for Tehyungggg Phase 1, 2 & 3
+// Entities: User, Project, Task, TaskLog, TaskNote, Conversation, Reminder
 
 generator client {
   provider = "prisma-client-js"
@@ -107,9 +107,10 @@ model Task {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  project Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  logs    TaskLog[]
-  notes   TaskNote[]
+  project   Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  logs      TaskLog[]
+  notes     TaskNote[]
+  reminders Reminder[]
 
   @@index([status])
   @@index([priority])
@@ -160,4 +161,29 @@ model Conversation {
 
   @@index([userId])
   @@index([createdAt])
+}
+
+// ─── Reminder (Phase 3 — Reminder System) ──────────────
+
+enum ReminderStatus {
+  Pending
+  Sent
+  Dismissed
+}
+
+model Reminder {
+  id            String         @id @default(cuid())
+  userId        String
+  title         String
+  message       String         @db.Text
+  remindAt      DateTime       // stored in UTC, input converted from WIB
+  relatedTaskId String?
+  status        ReminderStatus @default(Pending)
+  createdAt     DateTime       @default(now())
+
+  relatedTask   Task?          @relation(fields: [relatedTaskId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([remindAt])
+  @@index([status])
 }

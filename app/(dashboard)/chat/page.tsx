@@ -57,6 +57,10 @@ export default function ChatPage() {
     if (!text || loading) return;
 
     setInput("");
+    // Reset textarea height
+    if (inputRef.current) {
+      inputRef.current.style.height = "auto";
+    }
     setLoading(true);
 
     // Optimistically add user message
@@ -206,17 +210,24 @@ export default function ChatPage() {
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-white/[0.06] pt-4">
-        <form onSubmit={handleSubmit} className="flex gap-3">
+      <div className="flex-shrink-0 border-t border-white/[0.06] pt-4">
+        <form onSubmit={handleSubmit} className="flex items-end gap-3">
           <div className="flex-1 relative">
             <textarea
               ref={inputRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                // Auto-resize textarea
+                const el = e.target;
+                el.style.height = "auto";
+                el.style.height = Math.min(el.scrollHeight, 150) + "px";
+              }}
               onKeyDown={handleKeyDown}
               placeholder="Ketik pesan..."
               rows={1}
-              className="w-full bg-surface-50 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-brand-500/40 focus:ring-1 focus:ring-brand-500/20 resize-none transition-all"
+              style={{ maxHeight: "150px" }}
+              className="w-full bg-surface-50 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-brand-500/40 focus:ring-1 focus:ring-brand-500/20 resize-none transition-colors overflow-y-auto"
               disabled={loading}
               autoFocus
             />
@@ -309,6 +320,10 @@ function ToolCallCard({ toolCall }: { toolCall: ToolCallResult }) {
     updateTask: "📝 Task Diupdate",
     deleteTask: "🗑️ Task Dihapus",
     searchTask: "🔍 Pencarian Task",
+    searchProject: "📂 Pencarian Project",
+    createReminder: "🔔 Reminder Dibuat",
+    listReminders: "📋 Daftar Reminder",
+    dismissReminder: "✅ Reminder Dismissed",
   };
 
   const label = toolLabels[toolCall.name] || toolCall.name;

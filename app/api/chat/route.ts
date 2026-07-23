@@ -25,19 +25,48 @@ export async function POST(request: NextRequest) {
   });
 
   // 2. Build conversation history for Gemini context
+  //    Fetch latest 50 messages (desc order), then reverse to chronological
   const history = await db.conversation.findMany({
     where: { userId },
-    orderBy: { createdAt: "asc" },
-    take: 50, // Limit context window
+    orderBy: { createdAt: "desc" },
+    take: 50,
   });
+  history.reverse();
 
-  // Convert DB history to Gemini format
-  const contents: Content[] = history
+  // Convert DB history to Gemini format, filtering out tool messages
+  const rawContents: Content[] = history
     .filter((msg) => msg.role === "user" || msg.role === "assistant")
     .map((msg) => ({
-      role: msg.role === "user" ? "user" : "model",
+      role: (msg.role === "user" ? "user" : "model") as "user" | "model",
       parts: [{ text: msg.content }],
     }));
+
+  // Safeguard: merge consecutive same-role messages & ensure valid turn order
+  const contents: Content[] = [];
+  for (const entry of rawContents) {
+    const last = contents[contents.length - 1];
+    if (last && last.role === entry.role) {
+      // Merge consecutive same-role messages
+      const prevText = last.parts?.map((p) => ("text" in p ? p.text : "")).join("\n") || "";
+      const newText = entry.parts?.map((p) => ("text" in p ? p.text : "")).join("\n") || "";
+      last.parts = [{ text: prevText + "\n" + newText }];
+    } else {
+      contents.push({ ...entry });
+    }
+  }
+
+  // Gemini requires: first message = "user", last message = "user"
+  while (contents.length > 0 && contents[0].role !== "user") {
+    contents.shift();
+  }
+  while (contents.length > 0 && contents[contents.length - 1].role !== "user") {
+    contents.pop();
+  }
+
+  // Safety: if no valid contents, add at least the current user message
+  if (contents.length === 0) {
+    contents.push({ role: "user", parts: [{ text: message }] });
+  }
 
   // 3. Call Gemini with tools
   try {
@@ -52,18 +81,19 @@ export async function POST(request: NextRequest) {
 
     // 4. Handle function calls (may be multiple rounds)
     const toolResults: { name: string; args: Record<string, unknown>; result: unknown }[] = [];
-    let maxRounds = 5; // Safety limit to prevent infinite loops
+    let maxRounds = 10; // Safety limit to prevent infinite loops
+    // Accumulate full context across tool call rounds
+    let accumulatedContents: Content[] = [...contents];
 
     while (response.functionCalls && response.functionCalls.length > 0 && maxRounds > 0) {
       maxRounds--;
 
       const functionCalls = response.functionCalls;
-      const functionResponses: Content[] = [...contents];
 
-      // Add model's original response (preserves thought_signature for Gemini 3.x)
+      // Add model's response to accumulated context (preserves thought_signature for Gemini 3.x)
       const modelContent = response.candidates?.[0]?.content;
       if (modelContent) {
-        functionResponses.push(modelContent);
+        accumulatedContents.push(modelContent);
       }
 
       // Execute each function call
@@ -71,7 +101,8 @@ export async function POST(request: NextRequest) {
       for (const fc of functionCalls) {
         const result = await executeToolCall(
           fc.name!,
-          (fc.args as Record<string, unknown>) || {}
+          (fc.args as Record<string, unknown>) || {},
+          { userId }
         );
         toolResults.push({
           name: fc.name!,
@@ -86,16 +117,16 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Add function responses to context
-      functionResponses.push({
+      // Add function responses to accumulated context
+      accumulatedContents.push({
         role: "user" as const,
         parts: responseParts,
       });
 
-      // Call Gemini again with function results
+      // Call Gemini again with full accumulated context
       response = await getGenAI().models.generateContent({
         model: MODEL,
-        contents: functionResponses,
+        contents: accumulatedContents,
         config: {
           systemInstruction: SYSTEM_INSTRUCTION,
           tools: [{ functionDeclarations: toolDeclarations }],
@@ -103,8 +134,62 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 5. Extract final text response
-    const aiText = response.text || "Maaf, aku tidak bisa memproses permintaan itu.";
+    // 5. Extract final text response (robust: response.text can throw on thinking models)
+    let aiText = "";
+    try {
+      aiText = response.text || "";
+    } catch {
+      // response.text throws if no text candidates (e.g. thinking-only response)
+    }
+
+    // Fallback: try extracting text from candidate parts directly
+    if (!aiText) {
+      const parts = response.candidates?.[0]?.content?.parts;
+      if (parts) {
+        aiText = parts
+          .filter((p) => "text" in p && typeof p.text === "string")
+          .map((p) => (p as { text: string }).text)
+          .join("");
+      }
+    }
+
+    // If still no text but we had tool calls, make one final call WITHOUT tools
+    // to force the model to generate a text summary
+    if (!aiText && toolResults.length > 0) {
+      console.log("[Chat API] No text after tool calls, making final text-only call...");
+      // Add model's last response if it had content
+      const lastModelContent = response.candidates?.[0]?.content;
+      if (lastModelContent) {
+        accumulatedContents.push(lastModelContent);
+      }
+      // Add a nudge to generate text
+      accumulatedContents.push({
+        role: "user" as const,
+        parts: [{ text: "Tolong berikan ringkasan dari aksi yang sudah kamu lakukan tadi." }],
+      });
+
+      try {
+        const textResponse = await getGenAI().models.generateContent({
+          model: MODEL,
+          contents: accumulatedContents,
+          config: {
+            systemInstruction: SYSTEM_INSTRUCTION,
+            // No tools — force text response
+          },
+        });
+        try {
+          aiText = textResponse.text || "";
+        } catch {
+          // ignore
+        }
+      } catch (err) {
+        console.warn("[Chat API] Final text-only call failed:", err);
+      }
+    }
+
+    if (!aiText) {
+      aiText = "Aku sudah selesai memproses permintaanmu! 👍";
+    }
 
     // 6. Save tool calls to conversation
     if (toolResults.length > 0) {

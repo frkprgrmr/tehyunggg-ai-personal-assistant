@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:api": "vitest run tests"
+    "test:api": "vitest run tests",
+    "cron:reminders": "tsx scripts/reminder-cron.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

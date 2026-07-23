@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   Plus,
   ArrowRight,
+  Bell,
 } from "lucide-react";
 import { formatDistanceToNow, isAfter, startOfDay, endOfDay, isBefore } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -35,8 +36,18 @@ interface Stats {
   completed: number;
 }
 
+interface Reminder {
+  id: string;
+  title: string;
+  message: string;
+  remindAt: string;
+  status: string;
+  relatedTask: { id: string; title: string; status: string } | null;
+}
+
 export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, dueToday: 0, overdue: 0, completed: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -70,8 +81,12 @@ export default function DashboardPage() {
           ).length,
           completed: data.filter((t) => t.status === "Done").length,
         });
+        // Fetch reminders
+        const remRes = await fetch("/api/reminders?status=Pending");
+        const remData = await remRes.json();
+        if (Array.isArray(remData)) setReminders(remData.slice(0, 3));
       } catch (err) {
-        console.error("Failed to fetch tasks:", err);
+        console.error("Failed to fetch data:", err);
       } finally {
         setLoading(false);
       }
@@ -237,6 +252,65 @@ export default function DashboardPage() {
                     <TaskStatusBadge status={task.status} />
                   </div>
                 </Link>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Upcoming Reminders */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white">Upcoming Reminders</h2>
+            <Link
+              href="/reminders"
+              className="flex items-center gap-1 text-sm text-brand-400 hover:text-brand-300 transition-colors"
+            >
+              View all <ArrowRight size={14} />
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {reminders.length === 0 ? (
+            <div className="text-center py-8">
+              <Bell size={40} className="mx-auto text-white/20 mb-3" />
+              <p className="text-white/40 text-sm">Belum ada reminder aktif.</p>
+              <p className="text-white/30 text-xs mt-1">
+                Buat lewat chat: &quot;Ingetin gue besok jam 9...&quot;
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {reminders.map((reminder, index) => (
+                <div
+                  key={reminder.id}
+                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-surface-100 transition-all"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <div className="flex-shrink-0 p-2 rounded-lg bg-warning/10 border border-warning/20">
+                    <Bell size={16} className="text-warning" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white truncate">
+                      {reminder.title}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-white/40 flex items-center gap-1">
+                        <Clock size={10} />
+                        {formatDistanceToNow(new Date(reminder.remindAt), {
+                          addSuffix: true,
+                          locale: idLocale,
+                        })}
+                      </span>
+                      {reminder.relatedTask && (
+                        <span className="text-xs text-brand-400">
+                          → {reminder.relatedTask.title}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           )}
