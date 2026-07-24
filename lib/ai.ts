@@ -12,7 +12,7 @@ export function getGenAI(): GoogleGenAI {
   return _genai;
 }
 
-export const MODEL = "gemini-3.5-flash-lite";
+export const MODEL = process.env.GEMINI_MODEL;
 
 // ─── System Instruction ────────────────────────────────
 
