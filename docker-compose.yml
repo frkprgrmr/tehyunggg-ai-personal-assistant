@@ -27,7 +27,7 @@ services:
     depends_on:
       - db
     # Jalankan migration sebelum start Next.js
-    command: sh -c "printenv > .env && npx prisma migrate deploy && npm start"
+    command: sh -c "export DATABASE_URL=\"$$DATABASE_URL\" && npx prisma migrate deploy && npm start"
 
   cron:
     build:
@@ -40,7 +40,7 @@ services:
       - .env
     depends_on:
       - db
-    command: sh -c "printenv > .env && npm run cron:reminders"
+    command: sh -c "export DATABASE_URL=\"$$DATABASE_URL\" && npm run cron:reminders"
 
 volumes:
   pgdata:
