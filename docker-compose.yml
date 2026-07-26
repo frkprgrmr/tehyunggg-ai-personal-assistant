@@ -26,8 +26,8 @@ services:
       - .env
     depends_on:
       - db
-    # Jalankan migration sebelum start Next.js
-    command: sh -c "npx prisma migrate deploy && npm start"
+    # Sync schema lalu start Next.js (safe: hanya tambah tabel baru, tidak hapus data)
+    command: sh -c "npx prisma db push --accept-data-loss=false && npx prisma generate && npm start"
 
   cron:
     build:
