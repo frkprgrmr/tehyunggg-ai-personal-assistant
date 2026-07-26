@@ -27,7 +27,7 @@ services:
     depends_on:
       - db
     # Sync schema lalu start Next.js (safe: hanya tambah tabel baru, tidak hapus data)
-    command: sh -c "npx prisma db push --accept-data-loss=false && npx prisma generate && npm start"
+    command: sh -c "npx prisma db push --accept-data-loss=false && npm start"
 
   cron:
     build:
