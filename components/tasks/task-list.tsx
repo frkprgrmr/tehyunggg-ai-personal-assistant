@@ -13,6 +13,7 @@ import { id as idLocale } from "date-fns/locale";
 
 interface Task {
   id: string;
+  taskNumber: number;
   title: string;
   description: string | null;
   status: string;
@@ -265,6 +266,7 @@ export default function TaskListContent() {
                               : "text-white"
                           }`}
                         >
+                          <span className="text-white/40 mr-2">#{task.taskNumber}</span>
                           {task.title}
                         </p>
                         <div className="flex items-center gap-3 mt-1.5 flex-wrap">

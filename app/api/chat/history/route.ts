@@ -10,11 +10,15 @@ export async function GET() {
 
   const userId = session.user.id!;
 
-  const messages = await db.conversation.findMany({
+  // Fetch the latest 50 messages
+  const rawMessages = await db.conversation.findMany({
     where: { userId },
-    orderBy: { createdAt: "asc" },
+    orderBy: { createdAt: "desc" },
     take: 100,
   });
+
+  // Reverse them so they are in chronological order for the UI
+  const messages = rawMessages.reverse();
 
   return Response.json(messages);
 }

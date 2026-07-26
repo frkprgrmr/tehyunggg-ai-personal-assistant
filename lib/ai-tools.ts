@@ -152,7 +152,12 @@ export async function handleSearchTask(args: {
 }) {
   const where: Prisma.TaskWhereInput = {};
 
-  if (args.status) where.status = args.status as Prisma.EnumTaskStatusFilter;
+  if (args.status) {
+    where.status = args.status as Prisma.EnumTaskStatusFilter;
+  } else if (!args.query) {
+    where.status = { not: "Done" };
+  }
+
   if (args.priority)
     where.priority = args.priority as Prisma.EnumTaskPriorityFilter;
   if (args.category)
@@ -160,9 +165,11 @@ export async function handleSearchTask(args: {
   if (args.projectId) where.projectId = args.projectId;
 
   if (args.query) {
+    const queryAsNumber = parseInt(args.query, 10);
     where.OR = [
       { title: { contains: args.query, mode: "insensitive" } },
       { description: { contains: args.query, mode: "insensitive" } },
+      ...(isNaN(queryAsNumber) ? [] : [{ taskNumber: queryAsNumber }]),
     ];
   }
 

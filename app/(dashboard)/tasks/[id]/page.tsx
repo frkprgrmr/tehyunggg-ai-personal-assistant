@@ -33,6 +33,7 @@ interface TaskNote {
 
 interface Task {
   id: string;
+  taskNumber: number;
   title: string;
   description: string | null;
   status: string;
@@ -269,7 +270,8 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
             <ArrowLeft size={20} />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-white">
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <span className="text-white/40">#{task.taskNumber}</span>
               {editing ? "Edit Task" : task.title}
             </h1>
             <div className="flex items-center gap-2 mt-1">

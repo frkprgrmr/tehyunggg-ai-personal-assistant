@@ -12,7 +12,7 @@ export function getGenAI(): GoogleGenAI {
   return _genai;
 }
 
-export const MODEL = (process.env.GEMINI_MODEL || "gemini-3.6-flash-lite") as string;
+export const MODEL = process.env.GEMINI_MODEL as string;
 
 // ─── System Instruction ────────────────────────────────
 
@@ -33,6 +33,7 @@ ATURAN UTAMA:
    - "gas" / "kerjain" → update status task ke InProgress
    - "nanti aja" / "skip dulu" → bisa dipetakan ke update priority atau reschedule
    - "hapus task X" → cari task, lalu hapus
+   - "task no 3 udah kelar" → gunakan searchTask dengan query "3" untuk mendapat taskId-nya, lalu update status ke Done.
 4. Timezone: User berada di Asia/Jakarta (WIB, UTC+7). Jika user bilang "besok", hitung berdasarkan tanggal hari ini di WIB. Tanggal hari ini di WIB: ${new Date().toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta", weekday: "long", year: "numeric", month: "long", day: "numeric" })}.
 5. Saat membuat task, selalu tetapkan default priority Medium dan category Work kecuali user menyebutkan lain.
 6. Jika perintah user ambigu (misalnya "close aja" tanpa konteks task sebelumnya), tanyakan kembali ke user task mana yang dimaksud.
@@ -46,7 +47,10 @@ ATURAN UTAMA:
    - "Dismiss reminder follow up" → cari dulu dengan listReminders lalu dismissReminder
    - "Set alarm jam 3 sore" → createReminder dengan remindAt hari ini jam 15:00 WIB
 12. Saat membuat reminder, selalu konversi waktu WIB ke UTC (kurangi 7 jam) untuk field remindAt.
-13. Jika ada task terkait dengan reminder, cari taskId dulu pakai searchTask, lalu isi relatedTaskId.`;
+13. Jika ada task terkait dengan reminder, cari taskId dulu pakai searchTask, lalu isi relatedTaskId.
+14. Saat membuat task, buat judul (title) yang ringkas, rapi, dan profesional (action-oriented). JANGAN menyalin mentah-mentah ucapan user di judul. Contoh: "buat template SO via google sheet agar bisa di konsumsi power bi" menjadi "Create SO Template via Google Sheets for Power BI". SELAIN ITU, kamu WAJIB menyimpan ucapan/prompt mentah asli dari user tersebut ke dalam field 'description' agar konteks aslinya tidak hilang.
+15. Setiap task yang dibuat atau dicari memiliki field 'taskNumber' berurutan (misal: 1, 2, 3, dst.). Jika user menyebutkan nomor task (misal "task no 3"), kamu HARUS menggunakan tool searchTask dengan query angka tersebut (misal query: "3") untuk mendapatkan taskId-nya sebelum melakukan update/delete. Sangat dianjurkan untuk selalu menginformasikan nomor task (misal "Task #3") saat membalas konfirmasi pembuatan task ke user.
+16. Secara default, jika user meminta melihat daftar task secara umum tanpa query spesifik (misal "list task ku"), sistem tidak akan mengembalikan task yang sudah "Done". Informasikan saja ke user task-task yang belum selesai. Jika user spesifik ingin melihat yang sudah selesai, panggil tool dengan status "Done".`;
 
 // ─── Tool Declarations ─────────────────────────────────
 
