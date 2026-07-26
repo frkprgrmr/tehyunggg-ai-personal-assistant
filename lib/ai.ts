@@ -50,7 +50,13 @@ ATURAN UTAMA:
 13. Jika ada task terkait dengan reminder, cari taskId dulu pakai searchTask, lalu isi relatedTaskId.
 14. Saat membuat task, buat judul (title) yang ringkas, rapi, dan profesional (action-oriented). JANGAN menyalin mentah-mentah ucapan user di judul. Contoh: "buat template SO via google sheet agar bisa di konsumsi power bi" menjadi "Create SO Template via Google Sheets for Power BI". SELAIN ITU, kamu WAJIB menyimpan ucapan/prompt mentah asli dari user tersebut ke dalam field 'description' agar konteks aslinya tidak hilang.
 15. Setiap task yang dibuat atau dicari memiliki field 'taskNumber' berurutan (misal: 1, 2, 3, dst.). Jika user menyebutkan nomor task (misal "task no 3"), kamu HARUS menggunakan tool searchTask dengan query angka tersebut (misal query: "3") untuk mendapatkan taskId-nya sebelum melakukan update/delete. Sangat dianjurkan untuk selalu menginformasikan nomor task (misal "Task #3") saat membalas konfirmasi pembuatan task ke user.
-16. Secara default, jika user meminta melihat daftar task secara umum tanpa query spesifik (misal "list task ku"), sistem tidak akan mengembalikan task yang sudah "Done". Informasikan saja ke user task-task yang belum selesai. Jika user spesifik ingin melihat yang sudah selesai, panggil tool dengan status "Done".`;
+16. Secara default, jika user meminta melihat daftar task secara umum tanpa query spesifik (misal "list task ku"), sistem tidak akan mengembalikan task yang sudah "Done". Informasikan saja ke user task-task yang belum selesai. Jika user spesifik ingin melihat yang sudah selesai, panggil tool dengan status "Done".
+17. MEETING: Kamu bisa mencatat meeting. Pahami perintah kasual:
+   - "Tadi ada meeting sama Jorge dan Budi soal migrasi Odoo" → createMeeting dengan title singkat, meetingDate hari ini
+   - "Catat meeting kemarin sama tim warehouse" → createMeeting dengan meetingDate kemarin
+   - "Simpan transkrip meeting ini: [transkrip]" → createMeeting dengan transcript yang diberikan
+18. Saat membuat meeting via createMeeting, konversi meetingDate ke UTC ISO 8601. Jika user tidak menyebutkan waktu spesifik, gunakan jam 08:00 WIB (01:00 UTC) pada tanggal yang dimaksud.
+19. Setelah berhasil membuat meeting, informasikan ke user bahwa mereka bisa membuka halaman /meetings/{id} untuk paste transkrip dan melakukan analisis AI (summary + ekstrak task).`;
 
 // ─── Tool Declarations ─────────────────────────────────
 
@@ -263,6 +269,34 @@ export const toolDeclarations = [
         },
       },
       required: ["reminderId"],
+    },
+  },
+  {
+    name: "createMeeting",
+    description:
+      "Catat/buat record meeting baru. Gunakan ini ketika user menyebut pertemuan/rapat/meeting yang ingin dicatat. User bisa menambahkan transkrip lengkap nanti di halaman detail.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        title: {
+          type: Type.STRING,
+          description: "Judul singkat meeting (contoh: 'Meeting Migrasi Odoo', 'Sync Tim Warehouse')",
+        },
+        transcript: {
+          type: Type.STRING,
+          description: "Transkrip atau catatan teks meeting (opsional, bisa diisi nanti)",
+        },
+        meetingDate: {
+          type: Type.STRING,
+          description: "Tanggal dan waktu meeting dalam format ISO 8601 UTC. Contoh: '2025-07-26T01:00:00.000Z' untuk 26 Juli 2025 jam 08:00 WIB.",
+        },
+        participants: {
+          type: Type.ARRAY,
+          description: "Daftar nama peserta meeting (opsional)",
+          items: { type: Type.STRING },
+        },
+      },
+      required: ["title", "meetingDate"],
     },
   },
 ] as FunctionDeclaration[];

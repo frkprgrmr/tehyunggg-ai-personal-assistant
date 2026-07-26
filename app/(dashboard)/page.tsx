@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { TaskStatusBadge, TaskPriorityBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import DailyReviewCard from "@/components/daily-review/daily-review-card";
 import {
   ListTodo,
   Clock,
@@ -45,46 +46,69 @@ interface Reminder {
   relatedTask: { id: string; title: string; status: string } | null;
 }
 
+interface DailyReview {
+  id: string;
+  type: "Morning" | "Evening";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  content: any;
+  createdAt: string;
+}
+
 export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [dailyReviews, setDailyReviews] = useState<DailyReview[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, dueToday: 0, overdue: 0, completed: 0 });
   const [loading, setLoading] = useState(true);
+
+  const fetchTasks = useCallback(async () => {
+    try {
+      const res = await fetch("/api/tasks");
+      const data: Task[] = await res.json();
+      setTasks(data);
+
+      const now = new Date();
+      const todayStart = startOfDay(now);
+      const todayEnd = endOfDay(now);
+
+      setStats({
+        total: data.filter((t) => t.status !== "Cancelled").length,
+        dueToday: data.filter(
+          (t) =>
+            t.dueDate &&
+            t.status !== "Done" &&
+            t.status !== "Cancelled" &&
+            isAfter(new Date(t.dueDate), todayStart) &&
+            isBefore(new Date(t.dueDate), todayEnd)
+        ).length,
+        overdue: data.filter(
+          (t) =>
+            t.dueDate &&
+            t.status !== "Done" &&
+            t.status !== "Cancelled" &&
+            isBefore(new Date(t.dueDate), todayStart)
+        ).length,
+        completed: data.filter((t) => t.status === "Done").length,
+      });
+    } catch (err) {
+      console.error("Failed to fetch tasks:", err);
+    }
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch("/api/tasks");
-        const data: Task[] = await res.json();
-        setTasks(data);
+        await fetchTasks();
 
-        const now = new Date();
-        const todayStart = startOfDay(now);
-        const todayEnd = endOfDay(now);
-
-        setStats({
-          total: data.filter((t) => t.status !== "Cancelled").length,
-          dueToday: data.filter(
-            (t) =>
-              t.dueDate &&
-              t.status !== "Done" &&
-              t.status !== "Cancelled" &&
-              isAfter(new Date(t.dueDate), todayStart) &&
-              isBefore(new Date(t.dueDate), todayEnd)
-          ).length,
-          overdue: data.filter(
-            (t) =>
-              t.dueDate &&
-              t.status !== "Done" &&
-              t.status !== "Cancelled" &&
-              isBefore(new Date(t.dueDate), todayStart)
-          ).length,
-          completed: data.filter((t) => t.status === "Done").length,
-        });
         // Fetch reminders
         const remRes = await fetch("/api/reminders?status=Pending");
         const remData = await remRes.json();
         if (Array.isArray(remData)) setReminders(remData.slice(0, 3));
+
+        // Fetch daily reviews (today's)
+        const reviewRes = await fetch("/api/daily-review?limit=2");
+        const reviewData = await reviewRes.json();
+        if (Array.isArray(reviewData)) setDailyReviews(reviewData);
       } catch (err) {
         console.error("Failed to fetch data:", err);
       } finally {
@@ -92,7 +116,7 @@ export default function DashboardPage() {
       }
     }
     fetchData();
-  }, []);
+  }, [fetchTasks]);
 
   const recentTasks = tasks
     .filter((t) => t.status !== "Done" && t.status !== "Cancelled")
@@ -188,6 +212,19 @@ export default function DashboardPage() {
           );
         })}
       </div>
+
+      {/* Daily Review Cards */}
+      {dailyReviews.length > 0 && (
+        <div className="space-y-4">
+          {dailyReviews.map((review) => (
+            <DailyReviewCard
+              key={review.id}
+              review={review}
+              onReschedule={fetchTasks}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Recent Active Tasks */}
       <Card>

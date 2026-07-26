@@ -298,6 +298,32 @@ export async function handleDismissReminder(args: {
   return updated;
 }
 
+// ─── createMeeting ────────────────────────────────────
+
+export async function handleCreateMeeting(args: {
+  title: string;
+  transcript?: string;
+  meetingDate: string;
+  participants?: string[];
+}) {
+  const meeting = await db.meeting.create({
+    data: {
+      title: args.title,
+      transcript: args.transcript || "",
+      meetingDate: new Date(args.meetingDate),
+      participants: args.participants || [],
+    },
+  });
+
+  return {
+    id: meeting.id,
+    title: meeting.title,
+    meetingDate: meeting.meetingDate.toISOString(),
+    participants: meeting.participants,
+    url: `/meetings/${meeting.id}`,
+  };
+}
+
 // ─── Tool Router ───────────────────────────────────────
 
 export async function executeToolCall(
@@ -328,6 +354,8 @@ export async function executeToolCall(
       });
     case "dismissReminder":
       return handleDismissReminder(args as Parameters<typeof handleDismissReminder>[0]);
+    case "createMeeting":
+      return handleCreateMeeting(args as Parameters<typeof handleCreateMeeting>[0]);
     default:
       return { error: `Unknown tool: ${functionName}` };
   }

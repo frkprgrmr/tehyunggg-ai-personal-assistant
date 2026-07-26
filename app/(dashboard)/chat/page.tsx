@@ -32,23 +32,57 @@ export default function ChatPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Scroll to bottom
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = useCallback((instant = false) => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ 
+        behavior: instant ? "auto" : "smooth" 
+      });
+    }, 100);
   }, []);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+    // Only smooth scroll for new messages, instant for history load
+    scrollToBottom(historyLoading);
+  }, [messages, historyLoading, scrollToBottom]);
 
   // Load history on mount
   useEffect(() => {
-    fetch("/api/chat/history")
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setMessages(data);
-      })
-      .catch(console.error)
-      .finally(() => setHistoryLoading(false));
+    async function loadHistoryAndReviews() {
+      try {
+        // Load chat history
+        const historyRes = await fetch("/api/chat/history");
+        const historyData = await historyRes.json();
+        if (Array.isArray(historyData)) {
+          setMessages(historyData);
+        }
+
+        // Check for unshown daily review
+        const reviewRes = await fetch("/api/daily-review/latest");
+        if (reviewRes.ok) {
+          const review = await reviewRes.json();
+          if (review && review.content) {
+            const content = review.content as {
+              type: string;
+              summary: string;
+            };
+            const reviewType = content.type === "Morning" ? "☀️ Morning Review" : "🌙 Evening Review";
+            const reviewMessage: ConversationMessage = {
+              id: `review-${review.id}`,
+              role: "assistant",
+              content: `**${reviewType}**\n\n${content.summary}`,
+              createdAt: review.createdAt,
+            };
+            setMessages((prev) => [...prev, reviewMessage]);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load data:", err);
+      } finally {
+        setHistoryLoading(false);
+      }
+    }
+
+    loadHistoryAndReviews();
   }, []);
 
   async function handleSubmit(e: FormEvent) {

@@ -1,5 +1,5 @@
-// Prisma schema for Tehyungggg Phase 1, 2 & 3
-// Entities: User, Project, Task, TaskLog, TaskNote, Conversation, Reminder
+// Prisma schema for Tehyungggg Phase 1, 2, 3, 4 & 5
+// Entities: User, Project, Task, TaskLog, TaskNote, Conversation, Reminder, DailyReview, Meeting, Note
 
 generator client {
   provider = "prisma-client-js"
@@ -187,4 +187,57 @@ model Reminder {
   @@index([userId])
   @@index([remindAt])
   @@index([status])
+}
+
+// ─── DailyReview (Phase 4 — Daily Review) ──────────────
+
+enum DailyReviewType {
+  Morning
+  Evening
+}
+
+model DailyReview {
+  id           String          @id @default(cuid())
+  userId       String
+  type         DailyReviewType
+  content      Json            // { tasks, completedTasks, overdueTasks, reminders, summary }
+  shownInChat  Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([userId, type, createdAt])
+}
+
+// ─── Meeting (Phase 5 — Meeting Assistant) ─────────────
+
+model Meeting {
+  id           String   @id @default(cuid())
+  title        String
+  transcript   String   @db.Text
+  summary      String?  @db.Text
+  meetingDate  DateTime
+  participants String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  notes Note[]
+
+  @@index([meetingDate])
+  @@index([createdAt])
+}
+
+// ─── Note (Phase 5 — Meeting Notes) ────────────────────
+
+model Note {
+  id        String   @id @default(cuid())
+  meetingId String?
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  meeting Meeting? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+
+  @@index([meetingId])
+  @@index([createdAt])
 }

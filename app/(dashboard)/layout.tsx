@@ -12,15 +12,18 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  CalendarDays,
 } from "lucide-react";
 import { useState, ReactNode } from "react";
 import NotificationBell from "@/components/notifications/notification-bell";
+import GlobalReminderBanner from "@/components/notifications/global-reminder-banner";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/projects", label: "Projects", icon: FolderKanban },
+  { href: "/meetings", label: "Meetings", icon: CalendarDays },
   { href: "/reminders", label: "Reminders", icon: Bell },
 ];
 
@@ -125,9 +128,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-6 lg:p-8 max-w-7xl mx-auto">{children}</div>
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col bg-background relative overflow-hidden">
+        {/* Global Banner for due reminders */}
+        <GlobalReminderBanner />
+
+        {/* Scrollable Page Content */}
+        <div className="flex-1 overflow-y-auto scrollbar-thin">
+          <div className="p-6 lg:p-8 max-w-7xl mx-auto">{children}</div>
+        </div>
       </main>
     </div>
   );
