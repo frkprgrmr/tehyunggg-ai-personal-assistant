@@ -220,13 +220,30 @@ export async function handleCreateReminder(args: {
   relatedTaskId?: string;
   userId: string;
 }) {
+  // Resolve relatedTaskId — AI might pass taskNumber instead of UUID
+  let resolvedTaskId: string | null = null;
+  if (args.relatedTaskId) {
+    // Try to find by ID first
+    let task = await db.task.findUnique({ where: { id: args.relatedTaskId } });
+
+    // If not found, maybe AI passed a taskNumber
+    if (!task) {
+      const num = parseInt(args.relatedTaskId, 10);
+      if (!isNaN(num)) {
+        task = await db.task.findUnique({ where: { taskNumber: num } });
+      }
+    }
+
+    resolvedTaskId = task?.id || null;
+  }
+
   const reminder = await db.reminder.create({
     data: {
       userId: args.userId,
       title: args.title,
       message: args.message,
       remindAt: new Date(args.remindAt),
-      relatedTaskId: args.relatedTaskId || null,
+      relatedTaskId: resolvedTaskId,
     },
     include: {
       relatedTask: {
