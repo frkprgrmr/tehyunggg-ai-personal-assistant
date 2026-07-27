@@ -75,7 +75,7 @@ async function main() {
 
   // Call the generate API endpoint
   // Since this is a standalone script, we call the Next.js API via HTTP
-  const apiUrl = process.env.AUTH_URL || "http://web:3000";
+  const apiUrl = process.env.INTERNAL_API_URL || "http://web:3000";
   try {
     const res = await fetch(`${apiUrl}/api/daily-review/generate`, {
       method: "POST",
