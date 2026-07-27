@@ -1,7 +1,11 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import pg from "pg";
 
-// We can't use @/lib path aliases in standalone scripts, so inline the essentials
-const db = new PrismaClient();
+const connectionString = process.env.DATABASE_URL!;
+const pool = new pg.Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const db = new PrismaClient({ adapter });
 
 async function main() {
   const now = new Date();
@@ -71,7 +75,7 @@ async function main() {
 
   // Call the generate API endpoint
   // Since this is a standalone script, we call the Next.js API via HTTP
-  const apiUrl = process.env.AUTH_URL || "http://localhost:3000";
+  const apiUrl = process.env.AUTH_URL || "http://web:3000";
   try {
     const res = await fetch(`${apiUrl}/api/daily-review/generate`, {
       method: "POST",

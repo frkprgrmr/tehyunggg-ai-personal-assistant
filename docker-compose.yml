@@ -40,7 +40,7 @@ services:
       - .env
     depends_on:
       - db
-    command: sh -c "npm run cron:reminders"
+    command: sh -c "while true; do npm run cron:reminders && npm run cron:daily-review; sleep 60; done"
 
 volumes:
   pgdata:
